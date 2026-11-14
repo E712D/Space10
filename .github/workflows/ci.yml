@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances système
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgomp1 gdal-bin libgdal-dev libgeos-dev libproj-dev
+
+      - name: Installer les dépendances Python
+        run: |
+          pip install -r requirements/backend.txt -c requirements/constraints.txt
+          pip install -r requirements/qa.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests unitaires
+        run: pytest -m "not integration"
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+          USE_MOCK_ML: "true"
+          USE_FAKE_REPO: "true"
