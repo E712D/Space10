@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-            - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
@@ -26,7 +26,7 @@ jobs:
       - name: Installer les dépendances Python
         run: |
           pip install -r requirements/backend.txt -c requirements/constraints.txt
-          pip install -r requirements/qa.txt
+          pip install -r requirements/qa.txt -c requirements/constraints.txt
 
       - name: Lint (ruff)
         run: ruff check .
