@@ -7,3 +7,10 @@ db.sqlite3
 .vscode/
 staticfiles/
 media/
+
+.env
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+frontend/dist/
