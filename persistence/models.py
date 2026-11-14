@@ -68,3 +68,63 @@ class WeatherDaily(models.Model):
     class Meta:
         db_table = 'weather_daily'
         unique_together = ('plot', 'obs_date')
+
+class Season(models.Model):
+    """Modèle représentant une saison agricole liée à une parcelle."""
+    plot = models.ForeignKey(Plot, on_delete=models.CASCADE, related_name="seasons")
+    label = models.CharField(max_length=20, verbose_name="Libellé de saison (ex: 2027-A)")
+    start_date = models.DateField(verbose_name="Date de début")
+    end_date = models.DateField(verbose_name="Date de fin")
+    lock_date = models.DateField(verbose_name="Date de verrouillage")
+    status = models.CharField(max_length=20, default="open", verbose_name="Statut (open / locked)")
+
+    class Meta:
+        db_table = "persistence_season"
+        unique_together = ("plot", "label")
+
+    def __str__(self):
+        return f"Saison {self.label} (Parcelle {self.plot_id})"
+
+class StrategicReport(models.Model):
+    """Modèle pour restituer le bilan stratégique textuel en français (<= 150 mots)."""
+    season = models.OneToOneField(Season, on_delete=models.CASCADE, related_name="strategic_report")
+    content = models.TextField(help_text="Bilan stratégique textuel en français (<= 150 mots)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'strategic_reports'
+
+    def __str__(self):
+        return f"Bilan stratégique - Saison {self.season.label}"
+
+class PredictionReport(models.Model):
+    """Stocke le rapport de prédiction figé à la date de verrouillage (lock_date)."""
+    season = models.OneToOneField('Season', on_delete=models.CASCADE, related_name='prediction_report')
+    plot = models.ForeignKey(Plot, on_delete=models.CASCADE, related_name='prediction_reports')
+    
+    features_snapshot = models.JSONField(verbose_name="Caractéristiques météo/sol utilisées au moment du gel")
+    recommendations_snapshot = models.JSONField(verbose_name="Recommandations et scores générés")
+    
+    locked_at = models.DateTimeField(auto_now_add=True, verbose_name="Date et heure du verrouillage")
+
+    class Meta:
+        db_table = 'prediction_reports'
+
+    def __str__(self):
+        return f"Rapport figé - Saison {self.season.label} (Parcelle {self.plot_id})"
+
+
+class ModelVersion(models.Model):
+    """Enregistre les versions de modèles Edge AI / ML entraînées."""
+    version_tag = models.CharField(max_length=50, unique=True, verbose_name="Tag de version (ex: v1.2.0)")
+    file_path = models.CharField(max_length=255, verbose_name="Chemin du fichier du modèle")
+    metrics = models.JSONField(default=dict, help_text="Métriques (précision, RMSE, F1-score, etc.)")
+    is_active = models.BooleanField(default=False, verbose_name="Modèle actif en production")
+    trained_at = models.DateTimeField(auto_now_add=True, verbose_name="Date d'entraînement")
+
+    class Meta:
+        db_table = 'model_versions'
+
+    def __str__(self):
+        status = "Actif" % self.is_active if self.is_active else "Inactif"
+        return f"Modèle {self.version_tag} ({status})"
