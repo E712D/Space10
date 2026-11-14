@@ -1,0 +1,7 @@
+-r ml.txt
+Django
+djangorestframework
+gunicorn
+psycopg[binary]
+shapely
+httpx
