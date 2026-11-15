@@ -5,7 +5,12 @@ from core.views import (
     StrategicReportView, ModelVersionListView,
     LearningEvaluateView, LearningRetrainView
 )
-from .views import AnalyzePlotView, PlotSeasonsView, ReportAudioView
+from .views import (
+    AnalyzePlotView,
+    PlotSeasonsView,
+    ReportAudioView,
+    TerraCIRecommendationView,
+)
 
 # Routeur DRF principal pour toutes les ressources gérées par des ViewSets
 router = DefaultRouter()
@@ -16,6 +21,7 @@ router.register(r'seasons', SeasonViewSet, basename='season')
 urlpatterns = [
     # 1. Vues personnalisées existantes
     path('plots/analyze/', AnalyzePlotView.as_view(), name='analyze-plot'),
+    path('terraci/recommend/', TerraCIRecommendationView.as_view(), name='terraci-recommend'),
     path('plots/<int:plot_id>/seasons/', PlotSeasonsView.as_view(), name='plot-seasons'),
     path('plots/<int:plot_id>/report/audio/', ReportAudioView.as_view(), name='plot-report-audio'),
 

@@ -5,3 +5,6 @@ gunicorn
 psycopg[binary]
 shapely
 httpx
+celery
+numpy
+python-dotenv
