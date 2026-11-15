@@ -89,3 +89,29 @@ class ModelVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModelVersion
         fields = '__all__'
+
+
+# --- CONTRAT API TERRACI (VERSION FLEXIBLE / PRODUCTION) ---
+
+class TerraCILocalDataSerializer(serializers.Serializer):
+    mois_saison = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=12),
+        required=False
+    )
+    culture_actuelle = serializers.CharField(required=False, allow_blank=True)
+
+
+class TerraCIRequestSerializer(serializers.Serializer):
+    latitude = serializers.FloatField(min_value=-90, max_value=90)
+    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    
+    # Utilisation de JSONField pour accepter de manière souple n'importe quelle structure 
+    # de données environnementales (listes simples, tableaux 2D ou 3D) en provenance des sources externes
+    donnees_environnementales = serializers.JSONField(required=True)
+    
+    source_donnees = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    local_data = TerraCILocalDataSerializer(required=False)
+    priorites = serializers.ListField(
+        child=serializers.CharField(),
+        required=False
+    )

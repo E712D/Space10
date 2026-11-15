@@ -3,28 +3,46 @@ from django.utils import timezone
 from datetime import timedelta
 from persistence.models import Season, ModelVersion, PredictionReport
 from kombu import Connection
+from core.agronomy.ml_predictor import SeasonalClimatePredictor
+
 
 @shared_task
 def run_model_retraining_task(model_id):
     """
-    Tâche de fond asynchrone pour simuler ou exécuter le réentraînement lourd du modèle ML.
+    Tâche de fond asynchrone pour exécuter le réentraînement réel du modèle climatique ML.
     """
     try:
         model_version = ModelVersion.objects.get(pk=model_id)
-        model_version.metrics = {"status": "training_in_progress", "accuracy": None}
+        model_version.metrics = {"status": "training_in_progress", "r2_score": None}
         model_version.save()
 
-        # Simulation d'un traitement lourd (ou appel à ton script d'entraînement PyTorch/Scikit-learn)
-        # ... entrainement du modèle ...
-        
-        # Mise à jour une fois terminé
-        model_version.metrics = {"status": "completed", "accuracy": 0.92}
-        model_version.is_active = True
-        model_version.save()
-        
-        return f"Modèle {model_version.version_tag} réentraîné avec succès."
+        # Lancement de l'entraînement réel via scikit-learn
+        predictor = SeasonalClimatePredictor()
+        result = predictor.train()
+
+        if result.get("status") == "success":
+            # Mise à jour avec les vraies métriques du modèle entraîné
+            model_version.file_path = predictor.model_path
+            model_version.metrics = {
+                "status": "completed", 
+                "r2_score": result["r2_score"],
+                "samples_trained": result["samples_trained"]
+            }
+            model_version.is_active = True
+            model_version.save()
+            
+            return f"Modèle climatique {model_version.version_tag} réentraîné avec succès. Score R2: {result['r2_score']}"
+        else:
+            # Gestion du cas où il n'y a pas encore assez de données historiques
+            reason = result.get("message", "Données insuffisantes")
+            model_version.metrics = {"status": "failed_insufficient_data", "reason": reason}
+            model_version.save()
+            return f"Réentraînement ignoré : {reason}"
+
     except ModelVersion.DoesNotExist:
         return f"ModelVersion avec l'ID {model_id} introuvable."
+    except Exception as e:
+        return f"Erreur lors du réentraînement du modèle : {str(e)}"
 
 
 @shared_task

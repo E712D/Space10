@@ -99,6 +99,8 @@ sslmode = parse_qs(database_parts.query).get("sslmode")
 if sslmode:
     database_options["sslmode"] = sslmode[0]
 
+import os
+
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -111,7 +113,6 @@ DATABASES = {
         **({"OPTIONS": database_options} if database_options else {}),
     }
 }
-
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

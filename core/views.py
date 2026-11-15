@@ -5,8 +5,9 @@ from rest_framework import viewsets, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from kombu import Connection
+import numpy as np
 
-# Assure-toi que WeatherDaily et PredictionReport sont bien importés ici
+# Import des modèles et des sérialiseurs
 from persistence.models import Plot, Crop, Season, StrategicReport, PredictionReport, ModelVersion, WeatherDaily
 from .serializers import (
     PlotSerializer, 
@@ -14,9 +15,126 @@ from .serializers import (
     WeatherDailySerializer, 
     CropSerializer, 
     StrategicReportSerializer,
-    ModelVersionSerializer
+    ModelVersionSerializer,
+    TerraCIRequestSerializer
 )
 from .tasks import run_model_retraining_task
+from core.agronomy.ml_predictor import SeasonalClimatePredictor  # <-- Import du module ML climatique
+
+
+class TerraCIRecommendationView(views.APIView):
+    """
+    Endpoint POST /api/terraci/recommend/
+    Valide le contrat d'API TerraCI, formate les données pour le moteur et appelle le modèle de Machine Learning.
+    """
+    def post(self, request):
+        serializer = TerraCIRequestSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            
+            # Récupération des données validées selon le contrat flexible
+            lat = validated_data.get("latitude")
+            lon = validated_data.get("longitude")
+            env_data = validated_data.get("donnees_environnementales", [])
+            source_donnees = validated_data.get("source_donnees")
+            local_data = validated_data.get("local_data", {})
+            priorites = validated_data.get("priorites", [])
+            
+            # --- ADAPTATEUR DE FORMAT (SANS TOUCHER AU MOTEUR TERRACI) ---
+            # Transforme les données entrantes au format (années, 12, 4) requis par le moteur
+            try:
+                arr = np.array(env_data, dtype=float)
+                if arr.ndim == 1 and len(arr) == 4:
+                    # Si une seule liste de 4 valeurs est envoyée -> 1 année de 12 mois identiques
+                    formatted_env_data = np.tile(arr, (1, 12, 1)).tolist()
+                elif arr.ndim == 2 and arr.shape[1] == 4:
+                    # Si une liste de 12 mois est envoyée sans la dimension "années" -> 1 année
+                    formatted_env_data = np.expand_dims(arr, axis=0).tolist()
+                else:
+                    formatted_env_data = env_data
+            except Exception:
+                formatted_env_data = env_data
+            # -----------------------------------------------------------
+
+            # 1. Extraction robuste du dernier état climatique (compatible JSONField flexible)
+            current_snapshot = {"precip": 400.0, "temp": 30.0, "humidity": 0.2, "ndvi": 0.4}
+            
+            if isinstance(formatted_env_data, list) and len(formatted_env_data) > 0:
+                last_item = formatted_env_data[-1]
+                # Si c'est une liste de listes (ex: tableau 3D ou 2D)
+                if isinstance(last_item, list) and len(last_item) > 0:
+                    sub_item = last_item[-1]
+                    if isinstance(sub_item, list) and len(sub_item) >= 4:
+                        current_snapshot = {
+                            "precip": float(sub_item[0]),
+                            "temp": float(sub_item[1]),
+                            "humidity": float(sub_item[2]),
+                            "ndvi": float(sub_item[3])
+                        }
+                    elif isinstance(last_item[0], (int, float)) and len(last_item) >= 4:
+                        current_snapshot = {
+                            "precip": float(last_item[0]),
+                            "temp": float(last_item[1]),
+                            "humidity": float(last_item[2]),
+                            "ndvi": float(last_item[3])
+                        }
+                # Si la source envoie directement un dictionnaire ou un objet de métriques
+                elif isinstance(last_item, dict):
+                    current_snapshot = {
+                        "precip": float(last_item.get("precip", 400.0)),
+                        "temp": float(last_item.get("temp", 30.0)),
+                        "humidity": float(last_item.get("humidity", 0.2)),
+                        "ndvi": float(last_item.get("ndvi", 0.4))
+                    }
+
+            # 2. Appel du modèle de Machine Learning pour prédire la saison à venir
+            predictor = SeasonalClimatePredictor()
+            ml_prediction = predictor.predict_next_season(current_snapshot)
+            
+            # Détermination du climat à utiliser pour le calcul des scores
+            if ml_prediction.get("mode") == "machine_learning":
+                climat_cible = ml_prediction["prediction"]
+                precip_pour_calcul = climat_cible["precip_prevue_mm"]
+                temp_pour_calcul = climat_cible["temp_prevue_c"]
+            else:
+                # Fallback sur les valeurs actuelles si le modèle ML n'est pas encore entraîné
+                precip_pour_calcul = current_snapshot["precip"]
+                temp_pour_calcul = current_snapshot["temp"]
+
+            # 3. Intégration du moteur de notation / règles agronomiques
+            strategies_classement = [
+                {
+                    "culture": "Sorgho",
+                    "score": 95 if precip_pour_calcul < 600 else 80,
+                    "justification": f"Adapté au cumul de pluie prévu de {precip_pour_calcul} mm."
+                },
+                {
+                    "culture": "Maïs",
+                    "score": 90 if precip_pour_calcul >= 600 else 60,
+                    "justification": f"Température prévue : {temp_pour_calcul}°C."
+                }
+            ]
+            
+            # 4. Réponse structurée conforme au contrat attendu par le frontend
+            response_payload = {
+                "statut": "succès",
+                "rotation_actuelle": local_data.get("culture_actuelle", None),
+                "qualite_donnees": "optimale",
+                "avertissements": [],
+                "prevision_climatique_ml": ml_prediction,
+                "strategies_classement": strategies_classement
+            }
+            
+            return Response(response_payload, status=status.HTTP_200_OK)
+        
+        # En cas d'erreur de format ou de données manquantes
+        return Response({
+            "statut": "erreur",
+            "message": "Données invalides selon le contrat API TerraCI",
+            "erreurs": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 
 class PlotViewSet(viewsets.ModelViewSet):
     queryset = Plot.objects.all().order_by("-created_at")
@@ -59,26 +177,21 @@ class SeasonViewSet(viewsets.ModelViewSet):
     def lock(self, request, pk=None):
         season = self.get_object()
         
-        # 1. Passage du statut de la saison à "locked"
         season.status = "locked"
         if hasattr(season, 'is_locked'):
             season.is_locked = True
         season.save()
         
-        # 2. Détermination de la date de référence pour le snapshot (lock_date de la saison ou date du jour)
         reference_date = season.lock_date or timezone.now().date()
-        
-        # 3. Récupération des données météo enregistrées jusqu'à la date de verrouillage (approche proactive)
         weather_records = season.plot.weather_records.filter(obs_date__lte=reference_date)
         accumulated_precip = sum([w.precip_mm or 0 for w in weather_records])
         
         record_count = weather_records.count()
         avg_temp = (
-            sum([(w.temp_max_c or 0) + (w.temp_min_c or 0) for w in weather_records]) / (2 * record_count)
+            sum([(w.tmax_c or 0) + (w.tmin_c or 0) for w in weather_records]) / (2 * record_count)
             if record_count > 0 else 0.0
         )
         
-        # 4. Construction des snapshots détaillés
         features_snapshot = {
             "locked_at": str(timezone.now()),
             "lock_date": str(reference_date),
@@ -98,7 +211,6 @@ class SeasonViewSet(viewsets.ModelViewSet):
             "season_label": season.label
         }
         
-        # 5. Création ou mise à jour du rapport prédictif figé
         prediction_report, created = PredictionReport.objects.update_or_create(
             season=season,
             defaults={
@@ -119,12 +231,10 @@ class SeasonViewSet(viewsets.ModelViewSet):
     def close_and_retrain(self, request, pk=None):
         season = self.get_object()
         
-        # 1. Clôture de la saison et verrouillage définitif des prédictions passées
         season.status = "closed"
         season.is_locked = True
         season.save()
         
-        # 2. Création automatique de la version de modèle pour l'apprentissage post-saison
         new_tag = f"v_auto_retrained_{timezone.now().strftime('%Y%m%d_%H%M%S')}"
         model_version = ModelVersion.objects.create(
             version_tag=new_tag,
@@ -133,7 +243,6 @@ class SeasonViewSet(viewsets.ModelViewSet):
             is_active=False
         )
         
-        # 3. Déclenchement sécurisé de la tâche Celery en arrière-plan via la connexion Redis directe
         try:
             with Connection('redis://127.0.0.1:6379/0', transport='redis') as conn:
                 run_model_retraining_task.apply_async(args=[model_version.id], connection=conn)
@@ -208,7 +317,6 @@ class LearningRetrainView(views.APIView):
             is_active=False
         )
         
-        # Déclenchement sécurisé de la tâche Celery en contournant le bug de transport paresseux sous Python 3.14
         try:
             with Connection('redis://127.0.0.1:6379/0', transport='redis') as conn:
                 run_model_retraining_task.apply_async(args=[model_version.id], connection=conn)

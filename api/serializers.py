@@ -9,11 +9,11 @@ class AnalyzePlotRequestSerializer(serializers.Serializer):
 class TerraCIRecommendationRequestSerializer(serializers.Serializer):
     latitude = serializers.FloatField(min_value=-90, max_value=90)
     longitude = serializers.FloatField(min_value=-180, max_value=180)
-    donnees_environnementales = serializers.ListField(
-        child=serializers.ListField(
-            child=serializers.ListField(child=serializers.FloatField())
-        )
-    )
+    
+    # Remplacement des ListField stricts par JSONField pour accepter de manière souple 
+    # n'importe quelle structure (listes simples, 2D ou 3D) en provenance des sources externes
+    donnees_environnementales = serializers.JSONField(required=True)
+    
     source_donnees = serializers.CharField(
         trim_whitespace=True,
         allow_blank=False,
@@ -27,23 +27,6 @@ class TerraCIRecommendationRequestSerializer(serializers.Serializer):
         required=False,
         default=list,
     )
-
-    def validate_donnees_environnementales(self, donnees):
-        if not donnees:
-            raise serializers.ValidationError("Fournir au moins une année.")
-        for annee_index, annee in enumerate(donnees):
-            if len(annee) != 12:
-                raise serializers.ValidationError(
-                    f"L'année {annee_index + 1} doit contenir 12 mois."
-                )
-            for mois_index, mois in enumerate(annee):
-                if len(mois) != 4:
-                    raise serializers.ValidationError(
-                        f"Le mois {mois_index + 1} de l'année {annee_index + 1} "
-                        "doit contenir pluie, température, humidité du sol et NDVI."
-                    )
-
-        return donnees
 
     def validate_local_data(self, local_data):
         if not isinstance(local_data, dict):
