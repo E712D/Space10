@@ -9,7 +9,11 @@ from persistence.repositories import PlotRepository, SeasonRepository, WeatherRe
 from core.services.ml_adapter import MlAdapter
 from core.services.orchestrator import Orchestrator
 from core.services.audio_service import generate_report_audio
-from .serializers import AnalyzePlotRequestSerializer
+from core.agronomy.terraci_engine import EngineTerraCI, GRID_METADATA
+from .serializers import (
+    AnalyzePlotRequestSerializer,
+    TerraCIRecommendationRequestSerializer,
+)
 
 class UnitOfWorkRepositories:
     """Regroupe les repositories pour l'orchestrateur."""
@@ -54,6 +58,33 @@ class AnalyzePlotView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": f"Erreur interne : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TerraCIRecommendationView(APIView):
+    """Expose le moteur TerraCI sans remplacer l'analyse Space10 existante."""
+
+    def post(self, request):
+        serializer = TerraCIRecommendationRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        try:
+            engine = EngineTerraCI(
+                metadata=GRID_METADATA,
+                donnees_environnementales=data["donnees_environnementales"],
+                source_donnees=data["source_donnees"],
+            )
+            result = engine.executer(
+                lat=data["latitude"],
+                lon=data["longitude"],
+                local_data=data.get("local_data", {}),
+                priorites=data.get("priorites", []),
+            )
+        except (TypeError, ValueError) as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class PlotSeasonsView(APIView):

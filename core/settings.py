@@ -13,21 +13,26 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 import dotenv
+from urllib.parse import parse_qs, unquote, urlparse
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+dotenv.load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7s1!f+sk3wvn1)o(1m$f&ds^g#&%+mwltvyt=+*2=^i_l34fih'
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("Set SECRET_KEY in the environment or .env file.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
 
 
 # Application definition
@@ -81,17 +86,29 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ImproperlyConfigured("Set DATABASE_URL in the environment or .env file.")
+
+database_parts = urlparse(DATABASE_URL)
+if database_parts.scheme not in {"postgres", "postgresql"} or not database_parts.hostname or not database_parts.path.strip("/"):
+    raise ImproperlyConfigured("DATABASE_URL must be a PostgreSQL connection URL.")
+
+database_options = {}
+sslmode = parse_qs(database_parts.query).get("sslmode")
+if sslmode:
+    database_options["sslmode"] = sslmode[0]
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'postgres',
-        'USER': 'postgres.hwuesmtfhvwulwoiisnh',
-        'PASSWORD': 'Fulberte712d',
-        'HOST': 'aws-0-eu-west-2.pooler.supabase.com',
-        'PORT': 6543,
-        'TEST': {
-            'NAME': 'test_space10',
-        },
+    "default": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": unquote(database_parts.path.lstrip("/")),
+        "USER": unquote(database_parts.username or ""),
+        "PASSWORD": unquote(database_parts.password or ""),
+        "HOST": database_parts.hostname,
+        "PORT": database_parts.port or 5432,
+        "TEST": {"NAME": "test_space10"},
+        **({"OPTIONS": database_options} if database_options else {}),
     }
 }
 
