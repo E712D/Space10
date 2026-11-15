@@ -1,24 +1,12 @@
-import { FlaskConical, Mic, Satellite, Users } from 'lucide-react';
+import { FlaskConical } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { toast, Toaster } from 'sonner';
 import { usePlot } from '../context/PlotContext';
 import { fr } from '../i18n/fr';
 import { USE_MOCK } from '../services/api';
 import { BottomNav } from './BottomNav';
-import { Logo } from './Logo';
 import { SplashScreen } from './SplashScreen';
-
-const SCREENS = [
-  { to: '/', label: fr.nav.home, desc: fr.nav.home_desc },
-  { to: '/parcelle', label: fr.nav.farm, desc: fr.nav.farm_desc },
-  { to: '/assistant', label: fr.nav.talk, desc: fr.nav.talk_desc },
-  { to: '/prediction', label: fr.nav.climate, desc: fr.nav.climate_desc },
-  { to: '/recommandation', label: fr.nav.crops, desc: fr.nav.crops_desc },
-  { to: '/technique', label: fr.nav.technical, desc: fr.nav.technical_desc },
-] as const;
-
-const CHIP_ICONS = [Satellite, Users, Mic];
 
 /** Les notifications restent 8 s : le temps de les lire sans se presser. */
 const TOAST_MS = 8000;
@@ -43,8 +31,9 @@ function useOnline() {
 /**
  * Coque de l'application.
  * - Téléphone : plein écran ; bandeaux d'état fixes en haut, le contenu défile dessous, onglets collés en bas.
- * - Écran large : cadre de téléphone centré + panneau de présentation à gauche.
- * Les panneaux (PhoneSheet) et l'écran de démarrage se positionnent dans le cadre, ancêtre `relative`.
+ * L'application utilise une vraie largeur mobile, sans panneau de présentation ni coque
+ * décorative : sur téléphone elle occupe tout l'écran, et sur écran large elle reste lisible
+ * dans une largeur de travail mobile.
  */
 export function AppShell() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -59,51 +48,9 @@ export function AppShell() {
   }, [pathname]);
 
   return (
-    <div className="min-h-dvh lg:flex lg:items-center lg:justify-center lg:gap-16 lg:p-8">
-      <aside className="hidden max-w-sm lg:block">
-        <Logo />
-        <p className="mt-8 text-xs font-bold tracking-[0.18em] text-primary uppercase">{fr.app.concept_eyebrow}</p>
-        <p className="mt-3 font-display text-4xl leading-[1.05] font-bold tracking-tight text-foreground">
-          {fr.app.concept_title}
-        </p>
-        <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">{fr.app.concept_text}</p>
-        <ul className="mt-8 space-y-2">
-          {SCREENS.map((s, i) => (
-            <li key={s.to}>
-              <NavLink
-                to={s.to}
-                end={s.to === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-4 rounded-2xl border p-3 transition-colors ${
-                    isActive ? 'border-border bg-card shadow-soft' : 'border-transparent hover:bg-card/70'
-                  }`
-                }
-              >
-                <span className="flex size-9 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-secondary-foreground">
-                  {i + 1}
-                </span>
-                <span>
-                  <span className="block font-semibold text-foreground">{s.label}</span>
-                  <span className="block text-sm text-muted-foreground">{s.desc}</span>
-                </span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-muted-foreground">
-          {fr.app.concept_chips.map((chip, i) => {
-            const Icon = CHIP_ICONS[i] ?? Satellite;
-            return (
-              <span key={chip} className="inline-flex items-center gap-1.5 rounded-full bg-card/70 px-3 py-1.5">
-                <Icon className="size-3.5" /> {chip}
-              </span>
-            );
-          })}
-        </div>
-      </aside>
-
-      <div className="relative mx-auto w-full overflow-hidden lg:mx-0 lg:w-[392px] lg:shrink-0 lg:rounded-[3rem] lg:bg-forest-deep lg:p-3 lg:shadow-lift">
-        <div className="flex h-dvh flex-col overflow-hidden bg-background lg:h-[820px] lg:rounded-[2.4rem]">
+    <div className="min-h-dvh bg-background">
+      <div className="relative mx-auto w-full max-w-md overflow-hidden">
+        <div className="flex h-dvh flex-col overflow-hidden bg-background">
           {/* Bandeaux d'état : hors de la zone défilante, donc toujours visibles. */}
           {!online && (
             <p role="status" className="shrink-0 bg-destructive px-4 py-1.5 text-center text-xs font-semibold text-destructive-foreground">

@@ -10,7 +10,7 @@ import {
   Plus,
   UserRound,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { usePlot } from '../context/PlotContext';
 import { formatCoords, formatNumber } from '../i18n/format';
@@ -117,7 +117,7 @@ function AddPlotWizard({ onClose, onCreated }: Omit<AddPlotSheetProps, 'open'>) 
     setGeoError(null);
   };
 
-  const locate = () => {
+  const locate = useCallback(() => {
     if (!('geolocation' in navigator)) {
       setGeoError(t.geo_unsupported);
       return;
@@ -140,7 +140,11 @@ function AddPlotWizard({ onClose, onCreated }: Omit<AddPlotSheetProps, 'open'>) 
       },
       { timeout: GEO_TIMEOUT_MS },
     );
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!latText && !lonText) locate();
+  }, [latText, lonText, locate]);
 
   const save = async () => {
     if (!coords || !soil || ownerName === '' || saving) return;
@@ -427,7 +431,11 @@ function AddPlotWizard({ onClose, onCreated }: Omit<AddPlotSheetProps, 'open'>) 
           <div key="s3" className="animate-fade-up space-y-4">
             <p className="text-lg font-bold">{t.review_title}</p>
             <div className="overflow-hidden rounded-3xl bg-card shadow-card">
-              <FarmMap plots={[{ plot_id: PREVIEW_ID, name: plotName }]} activeId={PREVIEW_ID} label={t.review_map_label} />
+              <FarmMap
+                plots={[{ plot_id: PREVIEW_ID, name: plotName, latitude: coords?.latitude ?? 0, longitude: coords?.longitude ?? 0 }]}
+                activeId={PREVIEW_ID}
+                label={t.review_map_label}
+              />
               <p className="px-4 pt-2 text-xs font-medium text-muted-foreground">{fr.farm.map_caption}</p>
               <ul className="divide-y divide-border">
                 {rows.map((row) => (

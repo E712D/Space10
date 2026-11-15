@@ -5,10 +5,15 @@ def clip(val: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
     """Assure qu'une valeur reste bornée entre min_val et max_val."""
     return max(min_val, min(max_val, val))
 
-def compute_climate_score(crop: CropSheet, water_stress_index: float) -> float:
-    """Calcule la composante climat (résistance au stress hydrique prévu)."""
+def compute_climate_score(crop: CropSheet, water_stress_index: float, precip_mm: float | None = None) -> float:
+    """Calcule la compatibilité climatique avec le stress et la pluie prévus."""
     pressure = WATER_N.get(crop.water_need, 0.5) * (1 - 0.5 * TOL_N.get(crop.drought_tolerance, 0.6))
     score = 1 - clip(water_stress_index * pressure / 0.8, 0.0, 1.0)
+    if precip_mm is not None:
+        rainfall_availability = clip(precip_mm / 900.0, 0.0, 1.0)
+        water_need = WATER_N.get(crop.water_need, 0.5)
+        rainfall_fit = 1 - abs(rainfall_availability - water_need)
+        score = 0.65 * score + 0.35 * rainfall_fit
     return float(score)
 
 def compute_soil_moisture_score(crop: CropSheet, sm_root: float) -> float:

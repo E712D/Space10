@@ -26,6 +26,7 @@ def recommend_rotations(
     
     # Extraction des résumés de prédiction
     summary_features = prediction.get("season_summary", {}).get("features", {})
+    precip_total = summary_features.get("precip_total_mm", {}).get("value")
     wsi = summary_features.get("water_stress_index", {}).get("value", 0.5)
     if wsi is None: wsi = 0.5
     
@@ -62,7 +63,7 @@ def recommend_rotations(
 
     for crop in candidates:
         # 1. Calcul des composantes de score
-        climate = compute_climate_score(crop, wsi)
+        climate = compute_climate_score(crop, wsi, precip_total)
         soil_moisture = compute_soil_moisture_score(crop, sm_root)
         
         # Terme de rotation (compatibilité précédente -> courante)

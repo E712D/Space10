@@ -1,9 +1,34 @@
 from datetime import date, timedelta
 
+# Calendrier agronomique de référence pour la Côte d'Ivoire forestière et
+# préforestière. Les dates restent ajustables par parcelle et par région.
+COTE_DIVOIRE_SEASON_PROFILES = {
+    "A": {
+        "name_fr": "Grande saison agricole",
+        "rain_pattern": "saison des pluies principale",
+        "months": (3, 4, 5, 6, 7),
+    },
+    "B": {
+        "name_fr": "Petite saison agricole",
+        "rain_pattern": "saison des pluies secondaire",
+        "months": (9, 10, 11),
+    },
+}
+
+
+def season_profile(label: str) -> dict:
+    """Return the Côte d'Ivoire agricultural profile for a season label."""
+    year_str, period = label.split("-")
+    if period not in COTE_DIVOIRE_SEASON_PROFILES:
+        raise ValueError(f"Période de saison inconnue : {period}.")
+    return {"label": label, "year": int(year_str), **COTE_DIVOIRE_SEASON_PROFILES[period]}
+
+
 def season_window(label: str) -> tuple[date, date]:
     """
     Retourne la date de début et de fin d'une saison.
-    Format attendu : 'YYYY-A' (01 mars -> 31 juil) ou 'YYYY-B' (01 sept -> 30 nov).
+    Format attendu : 'YYYY-A' (grande saison, mars-juillet) ou
+    'YYYY-B' (petite saison, septembre-novembre).
     """
     try:
         year_str, period = label.split('-')

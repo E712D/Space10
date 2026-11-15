@@ -27,7 +27,9 @@ const PLOT_IMAGES: Record<string, string> = { maize: plotMaize, cocoa: plotCocoa
 
 /** Dernière culture connue de la parcelle (historique, sinon cultures pratiquées). */
 export const lastCropCode = (plot: PlotOut): string | null =>
-  plot.crop_history[plot.crop_history.length - 1]?.crop_code ?? plot.practiced_crops[0] ?? null;
+  (Array.isArray(plot.crop_history) ? plot.crop_history[plot.crop_history.length - 1]?.crop_code : null) ??
+  (Array.isArray(plot.practiced_crops) ? plot.practiced_crops[0] : null) ??
+  null;
 
 /** Vue aérienne illustrative selon la dernière culture ; undefined → vignette de repli. */
 export const plotImage = (plot: PlotOut): string | undefined => {

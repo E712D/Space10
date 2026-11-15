@@ -53,7 +53,9 @@ class Orchestrator:
 
         # 4. Récupération des données météo (via ML Adapter)
         last_weather_date = self.repos.weather.get_last_weather_date(plot_id)
-        fetch_start = last_weather_date + timedelta(days=1) if last_weather_date else date(1991, 1, 1)
+        # Une nouvelle parcelle doit disposer d'une année locale pour établir
+        # une climatologie mensuelle, sans bloquer l'API sur plusieurs décennies.
+        fetch_start = last_weather_date + timedelta(days=1) if last_weather_date else today - timedelta(days=365)
         fetch_end = today - timedelta(days=1)
 
         if fetch_start <= fetch_end:

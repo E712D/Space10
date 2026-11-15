@@ -918,7 +918,7 @@ def _valider_donnees_environnementales(donnees, metadata):
 
     if not format_valide:
         raise ValueError(
-            "Les données doivent avoir la forme (années, 12, 4) ou "
+            "Les données doivent contenir 12 mois et avoir la forme (années, 12, 4) ou "
             "(années, lignes, colonnes, 12, 4)."
         )
     if not np.all(np.isfinite(valeurs)):

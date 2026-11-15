@@ -23,7 +23,7 @@ class Plot(models.Model):
     soil_texture = models.TextField(null=True, blank=True)
     soil_ph = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)
     soil_organic_matter_pct = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    slope_pct = models.DecimalField(max_digits=4, decimal_places=1, default=0.0)
+    slope_pct = models.DecimalField(max_digits=4, decimal_places=1, default=0.0, null=True, blank=True)
     priorities = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -126,5 +126,5 @@ class ModelVersion(models.Model):
         db_table = 'model_versions'
 
     def __str__(self):
-        status = "Actif" % self.is_active if self.is_active else "Inactif"
+        status = "Actif" if self.is_active else "Inactif"
         return f"Modèle {self.version_tag} ({status})"

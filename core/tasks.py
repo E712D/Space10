@@ -2,8 +2,15 @@ from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
 from persistence.models import Season, ModelVersion, PredictionReport
+from persistence.models import Plot
 from kombu import Connection
 from core.agronomy.ml_predictor import SeasonalClimatePredictor
+from core.services.weather_service import NasaPowerService
+from persistence.repositories import WeatherRepository
+import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -70,7 +77,7 @@ def check_season_milestones():
         accumulated_precip = sum([w.precip_mm or 0 for w in weather_records])
         record_count = weather_records.count()
         avg_temp = (
-            sum([(w.temp_max_c or 0) + (w.temp_min_c or 0) for w in weather_records]) / (2 * record_count)
+            sum([(w.tmax_c or 0) + (w.tmin_c or 0) for w in weather_records]) / (2 * record_count)
             if record_count > 0 else 0.0
         )
         
@@ -112,4 +119,30 @@ def check_season_milestones():
             with Connection('redis://127.0.0.1:6379/0', transport='redis') as conn:
                 run_model_retraining_task.apply_async(args=[model_version.id], connection=conn)
         except Exception as e:
-            pass
+            logger.warning("Automatic retraining could not be queued for season %s: %s", season.id, e)
+
+
+@shared_task
+def refresh_nasa_weather():
+    """Refreshes the latest NASA POWER observations for every geolocated plot."""
+    today = timezone.now().date()
+    service = NasaPowerService()
+    repository = WeatherRepository()
+    refreshed = 0
+    for plot in Plot.objects.exclude(centroid__isnull=True).iterator():
+        latest = repository.get_last_weather_date(plot.id)
+        start = (
+            latest + timedelta(days=1)
+            if latest
+            else today - timedelta(days=3650)
+        )
+        if start > today:
+            continue
+        try:
+            data = service.fetch_daily(plot.centroid.y, plot.centroid.x, start, today)
+            if not data.empty:
+                repository.upsert_weather_daily(plot.id, data)
+                refreshed += len(data)
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning("NASA POWER refresh failed for plot %s: %s", plot.id, exc)
+    return {"plots": Plot.objects.exclude(centroid__isnull=True).count(), "records": refreshed}

@@ -1,4 +1,5 @@
 from datetime import date
+import math
 import pandas as pd
 from django.contrib.gis.geos import Point
 from .models import Plot, Season, WeatherDaily, Crop, PredictionReport
@@ -85,21 +86,30 @@ class WeatherRepository:
 
     def upsert_weather_daily(self, plot_id: int, df: pd.DataFrame):
         plot = Plot.objects.get(pk=plot_id)
+        def finite(value):
+            if value is None or pd.isna(value):
+                return None
+            try:
+                return value if math.isfinite(float(value)) else None
+            except (TypeError, ValueError):
+                return None
+
         for _, row in df.iterrows():
             WeatherDaily.objects.update_or_create(
                 plot=plot,
                 obs_date=row['date'],
                 defaults={
-                    'tmax_c': row.get('tmax_c'),
-                    'tmin_c': row.get('tmin_c'),
-                    'tmean_c': row.get('tmean_c'),
-                    'precip_mm': row.get('precip_mm'),
-                    'rh_pct': row.get('rh_pct'),
-                    'solar_mj_m2': row.get('solar_mj_m2'),
-                    'sm_surface': row.get('sm_surface'),
-                    'sm_root': row.get('sm_root'),
-                    'et0_mm': row.get('et0_mm'),
-                    'ndvi': row.get('ndvi'),
+                    'tmax_c': finite(row.get('tmax_c')),
+                    'tmin_c': finite(row.get('tmin_c')),
+                    'tmean_c': finite(row.get('tmean_c')),
+                    'precip_mm': finite(row.get('precip_mm')),
+                    'rh_pct': finite(row.get('rh_pct')),
+                    'solar_mj_m2': finite(row.get('solar_mj_m2')),
+                    'sm_surface': finite(row.get('sm_surface')),
+                    'sm_root': finite(row.get('sm_root')),
+                    'et0_mm': finite(row.get('et0_mm')),
+                    'ndvi': finite(row.get('ndvi')),
+                    'sources': row.get('sources') or {'provider': 'unknown'},
                 }
             )
 

@@ -20,8 +20,9 @@ const isErrorEnvelope = (x: unknown): x is ErrorEnvelope =>
 /** Appel JSON typé vers l'API Django REST. Les clés restent en snake_case. */
 export async function request<T>(method: 'GET' | 'POST' | 'PUT', path: string, options: RequestOptions = {}): Promise<T> {
   const { body, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const requestPath = path.endsWith('/') ? path : `${path}/`;
   try {
-    const response = await fetch(`${BASE_URL}${path}`, {
+    const response = await fetch(`${BASE_URL}${requestPath}`, {
       method,
       headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
       body: body === undefined ? undefined : JSON.stringify(body),

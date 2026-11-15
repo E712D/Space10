@@ -237,6 +237,26 @@ export type AlertKind = 'dry_spell' | 'heavy_rain' | 'heat_stress' | 'low_soil_m
 export interface CurrentSeasonOut {
   plot_id: string;
   season_label: string;
+  current_season: {
+    label: string;
+    year: number;
+    name_fr: string;
+    rain_pattern: string;
+    months: number[];
+    start_date: IsoDate;
+    end_date: IsoDate;
+    prediction_ready: boolean;
+  } | null;
+  next_season: {
+    label: string;
+    year: number;
+    name_fr: string;
+    rain_pattern: string;
+    months: number[];
+    start_date: IsoDate;
+    end_date: IsoDate;
+    prediction_ready: boolean;
+  };
   as_of: IsoDate;
   quality: Quality;
   precip_7d_mm: number | null;
@@ -309,4 +329,6 @@ export interface VoiceAnswerOut {
   data_missing: boolean;
   llm_used: boolean;
   suggestions: [string, string, string];
+  sources?: Array<{ name: string; type: 'model' | 'web'; url?: string }>;
+  cached?: boolean;
 }

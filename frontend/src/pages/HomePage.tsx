@@ -118,6 +118,15 @@ function WeatherCard({ plot, current }: { plot: PlotOut; current: CurrentSeasonO
             {degrees(last?.t2m_max_c)}
           </p>
           <p className="mt-1 text-[15px] font-medium">{t.temp_caption(formatShortDay(current.as_of))}</p>
+          <div className="mt-3 space-y-0.5 text-xs font-semibold opacity-90">
+            <p>
+              Saison actuelle : {current.current_season?.name_fr ?? 'inter-saison'}
+              {current.current_season ? ` (${current.current_season.label})` : ''}
+            </p>
+            <p>
+              Prochaine : {current.next_season.name_fr} ({current.next_season.label})
+            </p>
+          </div>
         </div>
         <BigIcon className="size-16 shrink-0 animate-float-soft text-sun drop-shadow-lg" strokeWidth={1.5} aria-hidden="true" />
       </div>
@@ -200,7 +209,7 @@ export function HomePage() {
   const [addingPlot, setAddingPlot] = useState(false);
 
   const current = activePlot && season.data?.plot_id === activePlot.plot_id ? season.data : null;
-  const firstName = activePlot?.owner_name.trim().split(/\s+/)[0] ?? '';
+  const firstName = activePlot?.owner_name?.trim().split(/\s+/)[0] ?? '';
   const firstCritical = analysis?.prediction.critical_periods[0];
   const seasonFinalized = analysis !== null && analysis.season.status !== 'draft';
   const topCrops = analysis?.recommendation.top_3 ?? [];
@@ -232,7 +241,7 @@ export function HomePage() {
             aria-hidden="true"
             className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-forest font-display font-bold text-primary-foreground"
           >
-            {initials(activePlot.owner_name)}
+            {initials(activePlot.owner_name ?? '')}
           </span>
         )}
         <div className="min-w-0">

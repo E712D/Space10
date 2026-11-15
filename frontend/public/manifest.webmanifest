@@ -1,0 +1,20 @@
+{
+  "name": "S3A — Assistant agricole",
+  "short_name": "S3A",
+  "description": "Assistant agricole connecté aux données météo et satellitaires.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbfaf5",
+  "theme_color": "#2f5d46",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

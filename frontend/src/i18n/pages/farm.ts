@@ -35,7 +35,7 @@ export const farm = {
     owner_label: 'Votre nom',
     owner_placeholder: 'Prénom et nom',
     place_title: 'Où se trouve votre champ ?',
-    place_text: 'Utilisez votre position ou choisissez la ville la plus proche.',
+    place_text: 'Votre position est recherchée automatiquement pour analyser ce champ. Vous pouvez la corriger si nécessaire.',
     locate: 'Utiliser ma position',
     locating: 'Recherche en cours…',
     position_found: 'Position trouvée',

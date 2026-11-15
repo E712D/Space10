@@ -153,6 +153,23 @@ function Conversation({ plot }: { plot: PlotOut }) {
                     </span>
                   )}
                   <p className="text-[15px] leading-snug break-words whitespace-pre-line">{x.answer.answer_text}</p>
+                  {x.answer.sources && x.answer.sources.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Source :{' '}
+                      {x.answer.sources.map((source, index) => (
+                        <span key={`${source.name}-${index}`}>
+                          {index > 0 && ', '}
+                          {source.url ? (
+                            <a href={source.url} target="_blank" rel="noreferrer" className="underline">
+                              {source.name}
+                            </a>
+                          ) : (
+                            source.name
+                          )}
+                        </span>
+                      ))}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => repeat(x.answer?.speak_text ?? '')}
