@@ -1,10 +1,13 @@
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppShell } from './components/AppShell';
+import { CropPreferenceProvider } from './context/CropPreferenceContext';
+import { ProfileProvider } from './context/ProfileContext';
 import { PlotProvider } from './context/PlotContext';
 import { AssistantPage } from './pages/AssistantPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PlotPage } from './pages/PlotPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { PredictionPage } from './pages/PredictionPage';
 import { RecommendationPage } from './pages/RecommendationPage';
 import { TechnicalPage } from './pages/TechnicalPage';
@@ -23,6 +26,7 @@ const router = createBrowserRouter([
       { path: '/recommandation', element: <RecommendationPage /> },
       { path: '/assistant', element: <AssistantPage /> },
       { path: '/technique', element: <TechnicalPage /> },
+      { path: '/profil', element: <ProfilePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
@@ -30,8 +34,12 @@ const router = createBrowserRouter([
 
 export function App() {
   return (
-    <PlotProvider>
-      <RouterProvider router={router} />
-    </PlotProvider>
+    <ProfileProvider>
+      <PlotProvider>
+        <CropPreferenceProvider>
+          <RouterProvider router={router} />
+        </CropPreferenceProvider>
+      </PlotProvider>
+    </ProfileProvider>
   );
 }

@@ -1,5 +1,18 @@
 /** Chaînes de l'écran « Cultures » (route /recommandation). */
 export const crops = {
+  desired_title: 'Quelles cultures vous intéressent ?',
+  desired_text:
+    'Choisissez des cultures pour ce champ. Nous les comparerons aux conseils reçus. Ce choix n’est pas encore envoyé au calcul.',
+  desired_legend: 'Cultures que vous souhaitez planter',
+  desired_empty: 'Aucune culture n’est disponible pour le moment.',
+  desired_results: 'Ce que disent les conseils',
+  desired_not_evaluated:
+    'Cette culture ne figure pas dans les résultats reçus. Elle n’a donc pas été évaluée ; cela ne signifie pas qu’elle est mauvaise.',
+  desired_next_season: 'Conseillée pour la saison suivante',
+  desired_penalty: (reason: string) => `Point à surveiller : ${reason}`,
+  preference_storage_issue:
+    'Le téléphone ne permet pas de garder ces choix. Ils resteront disponibles pendant cette visite, mais pourront être perdus ensuite.',
+
   // 1. Culture conseillée (toujours visible)
   main_title: 'Culture conseillée',
   why: 'Pourquoi ?',

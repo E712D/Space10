@@ -12,6 +12,7 @@ import { climate } from './pages/climate';
 import { crops } from './pages/crops';
 import { farm } from './pages/farm';
 import { home } from './pages/home';
+import { profile } from './pages/profile';
 import { technical } from './pages/technical';
 
 export const fr = {
@@ -150,6 +151,7 @@ export const fr = {
     back: 'Retour à l’accueil',
   },
   home,
+  profile,
   farm,
   climate,
   crops,

@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { AnalysisGate } from '../components/AnalysisGate';
 import { Button } from '../components/Button';
 import { Collapsible } from '../components/Collapsible';
+import { DesiredCropSection } from '../components/DesiredCropSection';
 import { PhoneSheet } from '../components/PhoneSheet';
 import { ScoreRing } from '../components/ScoreRing';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -366,6 +367,7 @@ export function RecommendationPage() {
   return (
     <main className="flex-1 pb-6">
       <ScreenHeader eyebrow={eyebrow} title={fr.nav.crops} />
+      {activePlot && <DesiredCropSection analysis={analysis} />}
       <AnalysisGate loadingVariant="crops">{(a, plot) => <CropsContent analysis={a} plot={plot} />}</AnalysisGate>
     </main>
   );

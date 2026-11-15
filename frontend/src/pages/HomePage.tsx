@@ -26,6 +26,7 @@ import { ScoreRing } from '../components/ScoreRing';
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews';
 import { CropThumb, hasCropImage, hasPlotImage, IllustrationTag, PlotThumb } from '../components/Thumbs';
 import { usePlot } from '../context/PlotContext';
+import { useProfile } from '../context/ProfileContext';
 import { useAdvice } from '../hooks/useAdvice';
 import { useAsync } from '../hooks/useAsync';
 import { useCurrentSeason } from '../hooks/useCurrentSeason';
@@ -192,6 +193,7 @@ function SectionTitle({ children, action }: { children: ReactNode; action?: Reac
 
 export function HomePage() {
   const { activePlot, plotsLoading, plotsError, reloadPlots, analysis, analysisRunning, analysisError } = usePlot();
+  const { profile, storageIssue } = useProfile();
   const advice = useAdvice();
   const season = useCurrentSeason();
   const clock = useAsync(() => api.getClock(), []);
@@ -200,7 +202,8 @@ export function HomePage() {
   const [addingPlot, setAddingPlot] = useState(false);
 
   const current = activePlot && season.data?.plot_id === activePlot.plot_id ? season.data : null;
-  const firstName = activePlot?.owner_name.trim().split(/\s+/)[0] ?? '';
+  const profileName = profile?.displayName || activePlot?.owner_name || '';
+  const firstName = profileName.trim().split(/\s+/)[0] ?? '';
   const firstCritical = analysis?.prediction.critical_periods[0];
   const seasonFinalized = analysis !== null && analysis.season.status !== 'draft';
   const topCrops = analysis?.recommendation.top_3 ?? [];
@@ -227,14 +230,13 @@ export function HomePage() {
   return (
     <main className="flex-1 pb-6">
       <header className="flex items-center gap-3 px-5 pt-6">
-        {activePlot && (
-          <span
-            aria-hidden="true"
-            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-forest font-display font-bold text-primary-foreground"
-          >
-            {initials(activePlot.owner_name)}
-          </span>
-        )}
+        <Link
+          to="/profil"
+          aria-label={fr.profile.edit_action}
+          className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-forest font-display font-bold text-primary-foreground"
+        >
+          {initials(profileName || fr.app.name)}
+        </Link>
         <div className="min-w-0">
           <p className="text-[13px] font-medium text-muted-foreground">
             {clock.data
@@ -246,8 +248,20 @@ export function HomePage() {
           <h1 className="truncate font-display text-2xl leading-tight font-bold">
             {firstName ? t.greeting_name(firstName) : t.greeting}
           </h1>
+          {profile?.village && (
+            <p className="mt-1 flex items-center gap-1 text-sm font-medium text-muted-foreground">
+              <MapPin className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{fr.profile.village_line(profile.village)}</span>
+            </p>
+          )}
         </div>
       </header>
+
+      {storageIssue && (
+        <p role="status" className="mx-5 mt-3 rounded-2xl bg-warning-soft p-3 text-sm font-medium text-foreground">
+          {fr.profile.storage_issue}
+        </p>
+      )}
 
       {plotsLoading ? (
         <LoadingState variant="home" className="mx-5 mt-5" />

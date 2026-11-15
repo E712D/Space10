@@ -1,7 +1,8 @@
 import { FlaskConical, Mic, Satellite, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { toast, Toaster } from 'sonner';
+import { useProfile } from '../context/ProfileContext';
 import { usePlot } from '../context/PlotContext';
 import { fr } from '../i18n/fr';
 import { USE_MOCK } from '../services/api';
@@ -51,12 +52,17 @@ export function AppShell() {
   const { pathname } = useLocation();
   const online = useOnline();
   const { plotsLoading } = usePlot();
+  const { profile } = useProfile();
+  const profileScreen = pathname === '/profil';
+  const initialSetup = profileScreen && !profile;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
     // Une notification parle de l'écran où elle est née : elle ne suit pas l'utilisateur ailleurs.
     toast.dismiss();
   }, [pathname]);
+
+  if (!profile && !profileScreen) return <Navigate to="/profil" replace />;
 
   return (
     <div className="min-h-dvh lg:flex lg:items-center lg:justify-center lg:gap-16 lg:p-8">
@@ -67,39 +73,43 @@ export function AppShell() {
           {fr.app.concept_title}
         </p>
         <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">{fr.app.concept_text}</p>
-        <ul className="mt-8 space-y-2">
-          {SCREENS.map((s, i) => (
-            <li key={s.to}>
-              <NavLink
-                to={s.to}
-                end={s.to === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-4 rounded-2xl border p-3 transition-colors ${
-                    isActive ? 'border-border bg-card shadow-soft' : 'border-transparent hover:bg-card/70'
-                  }`
-                }
-              >
-                <span className="flex size-9 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-secondary-foreground">
-                  {i + 1}
-                </span>
-                <span>
-                  <span className="block font-semibold text-foreground">{s.label}</span>
-                  <span className="block text-sm text-muted-foreground">{s.desc}</span>
-                </span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-muted-foreground">
-          {fr.app.concept_chips.map((chip, i) => {
-            const Icon = CHIP_ICONS[i] ?? Satellite;
-            return (
-              <span key={chip} className="inline-flex items-center gap-1.5 rounded-full bg-card/70 px-3 py-1.5">
-                <Icon className="size-3.5" /> {chip}
-              </span>
-            );
-          })}
-        </div>
+        {!initialSetup && (
+          <>
+            <ul className="mt-8 space-y-2">
+              {SCREENS.map((s, i) => (
+                <li key={s.to}>
+                  <NavLink
+                    to={s.to}
+                    end={s.to === '/'}
+                    className={({ isActive }) =>
+                      `flex items-center gap-4 rounded-2xl border p-3 transition-colors ${
+                        isActive ? 'border-border bg-card shadow-soft' : 'border-transparent hover:bg-card/70'
+                      }`
+                    }
+                  >
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-secondary-foreground">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <span className="block font-semibold text-foreground">{s.label}</span>
+                      <span className="block text-sm text-muted-foreground">{s.desc}</span>
+                    </span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-muted-foreground">
+              {fr.app.concept_chips.map((chip, i) => {
+                const Icon = CHIP_ICONS[i] ?? Satellite;
+                return (
+                  <span key={chip} className="inline-flex items-center gap-1.5 rounded-full bg-card/70 px-3 py-1.5">
+                    <Icon className="size-3.5" /> {chip}
+                  </span>
+                );
+              })}
+            </div>
+          </>
+        )}
       </aside>
 
       <div className="relative mx-auto w-full overflow-hidden lg:mx-0 lg:w-[392px] lg:shrink-0 lg:rounded-[3rem] lg:bg-forest-deep lg:p-3 lg:shadow-lift">
@@ -122,10 +132,10 @@ export function AppShell() {
             className="no-scrollbar flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto"
           >
             <Outlet />
-            <BottomNav />
+            {profile && !profileScreen && <BottomNav />}
           </div>
         </div>
-        <SplashScreen ready={!plotsLoading} />
+        <SplashScreen ready={!plotsLoading || profileScreen} />
       </div>
 
       <Toaster
